@@ -6,6 +6,11 @@ import {profile as vrnProfile} from 'hafas-client/p/vrn/index.js'
 import {profile as bvgProfile} from 'hafas-client/p/bvg/index.js'
 import {profile as oebbProfile} from 'hafas-client/p/oebb/index.js'
 import {data as loyaltyCards} from 'hafas-client/p/db/loyalty-cards.js'
+
+import {createClient as vendo_createClient} from 'db-vendo-client';
+import {profile as vendo_dbProfile} from 'db-vendo-client/p/db/index.js';
+import {profile as vendo_dbnavProfile} from 'db-vendo-client/p/dbnav/index.js';
+
 import { NodeCrypto, WebSocketRpcClient } from 'pinboard';
 
 import 'dotenv/config';
@@ -31,8 +36,8 @@ const userAgent = 'pinboard'
 
 
 class HafasAdapterRpc {
-    constructor(profile, userAgent) {
-        this.client = createClient(profile, userAgent);
+    constructor(profile, userAgent, createClient_ = createClient, ...args) {
+        this.client = createClient_(profile, userAgent, ...args);
         this.profile = profile;
     }
     trip(ctx){
@@ -92,3 +97,44 @@ rpc.registerObject('bvg-hafas', ['hafas'], new HafasAdapterRpc(bvgProfile, userA
 rpc.registerObject('oebb-hafas', ['hafas'], new HafasAdapterRpc(oebbProfile, userAgent));
 
 
+const mapRouteParsers = (route, parsers) => {
+	if (!route.includes('journey')) {
+		return parsers;
+	}
+	return {
+		...parsers,
+		loyaltyCard: loyaltyCardParser,
+		firstClass: {
+			description: 'Search for first-class options?',
+			type: 'boolean',
+			default: 'false',
+			parse: parseBoolean,
+		},
+		age: {
+			description: 'Age of traveller',
+			type: 'integer',
+			defaultStr: '*adult*',
+			parse: parseInteger,
+		},
+	};
+};
+
+const config = {
+	hostname: process.env.HOSTNAME || 'localhost',
+	port: process.env.PORT ? parseInt(process.env.PORT) : 3000,
+	name: 'db-vendo-client',
+	description: 'db-vendo-client',
+	homepage: 'https://github.com/public-transport/db-vendo-client',
+	version: '6',
+	docsLink: 'https://github.com/public-transport/db-vendo-client',
+	openapiSpec: true,
+	logging: true,
+	aboutPage: true,
+	enrichStations: true,
+	etags: 'strong',
+	csp: 'default-src \'none\'; style-src \'self\' \'unsafe-inline\'; img-src https:',
+	mapRouteParsers,
+};
+
+rpc.registerObject('dbvendo', ['hafas'], new HafasAdapterRpc(vendo_dbProfile, userAgent, vendo_createClient, config));
+rpc.registerObject('dbnavvendo', ['hafas'], new HafasAdapterRpc(vendo_dbProfile, userAgent, vendo_createClient, config));

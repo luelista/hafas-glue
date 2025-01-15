@@ -12,6 +12,7 @@
   "dependencies": {
     "@types/ws": "^8.5.10",
     "cbor-x": "^1.5.8",
+    "db-vendo-client": "^6.3.3",
     "dotenv": "^16.4.5",
     "hafas-client": "^6.3.2",
     "pinboard": "file:../pinboard-next",
